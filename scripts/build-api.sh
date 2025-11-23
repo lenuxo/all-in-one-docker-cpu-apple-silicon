@@ -2,6 +2,7 @@
 
 # 音乐分析API构建脚本 (推荐)
 # 构建现代化的RESTful API服务
+# 专为Mac M系列芯片（Apple Silicon）优化
 
 set -e
 

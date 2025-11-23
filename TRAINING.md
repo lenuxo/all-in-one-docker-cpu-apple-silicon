@@ -110,10 +110,14 @@ You can run the sweep with the following command:
 wandb sweep sweep.yaml
 ```
 
-And on each GPU, run the following command to start training:
+For Mac M series chips, run the following command to start training:
 
 ```shell
-CUDA_VISIBLE_DEVICES=0 wandb agent <SWEEP_ID>
-CUDA_VISIBLE_DEVICES=1 wandb agent <SWEEP_ID>
+# On Mac M1/M2/M3, use MPS (Metal Performance Shaders)
+PYTORCH_ENABLE_MPS_FALLBACK=1 wandb agent <SWEEP_ID>
+
+# For multiple parallel training sessions:
+PYTORCH_ENABLE_MPS_FALLBACK=1 wandb agent <SWEEP_ID> &
+PYTORCH_ENABLE_MPS_FALLBACK=1 wandb agent <SWEEP_ID> &
 ...
 ```

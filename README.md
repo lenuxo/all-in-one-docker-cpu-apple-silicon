@@ -7,6 +7,27 @@
 
 基于深度学习的音乐结构分析工具，支持**RESTful API v2.0**、**Python库**和**CLI**三种使用方式。
 
+## 💻 系统要求
+
+### ⚠️ 重要说明
+本项目**仅支持Mac M系列芯片设备**（M1/M2/M3/M4等），不具有跨平台兼容性。
+
+### 硬件要求
+- **设备**: Mac M系列芯片（Apple Silicon）
+- **内存**: 最低8GB，推荐16GB+
+- **存储**: 至少10GB可用空间
+- **网络**: 用于下载依赖和模型文件
+
+### 软件要求
+- **macOS**: 11.0+（Big Sur或更高版本）
+- **Docker**: 20.10+（支持Apple Silicon）
+- **Docker Compose**: 2.0+
+
+### 性能参考
+- **M1芯片**: 45-90秒/曲（取决于音频长度）
+- **M2/M3芯片**: 30-60秒/曲（优化性能）
+- **内存使用**: 峰值2-4GB（取决于音频文件大小）
+
 ## 🚀 快速开始
 
 ### API服务（推荐）
@@ -52,8 +73,9 @@ docker run -it allinone your_audio.wav
 - 📊 **10步实时进度跟踪**：从初始化到完成的详细分析过程
 - 💾 **内存文件处理**：避免磁盘空间膨胀，自动清理
 - 🛡️ **企业级可靠性**：完整错误处理、任务管理、并发控制
-- 📈 **系统监控**：CPU、内存、任务状态实时监控
-- 🎯 **灵活配置**：多种模型、设备、输出格式支持
+- 📈 **系统监控**：内存、任务状态实时监控
+- 🎯 **灵活配置**：多种模型、输出格式支持
+- 🍎 **Apple Silicon优化**：专为Mac M系列芯片优化
 
 ## 🔧 API使用示例
 
@@ -245,14 +267,18 @@ allin1 your_audio.wav \
 ## 📚 详细文档
 
 - **API完整文档**: [API_README.md](API_README.md)
+- **Apple Silicon兼容性**: [APPLE_SILICON.md](APPLE_SILICON.md)
+- **Docker架构说明**: [DOCKER_ARCHITECTURE.md](DOCKER_ARCHITECTURE.md)
 - **构建脚本说明**: [scripts/README.md](scripts/README.md)
 - **更新日志**: [CHANGELOG.md](CHANGELOG.md)
 
 ## ⚡ 性能
 
 - **精度**: 节拍检测误差<70ms
-- **速度**: CPU 30-60秒/曲，GPU 10-20秒/曲
+- **速度**: M1芯片45-90秒/曲，M2/M3芯片30-60秒/曲
 - **格式**: WAV（推荐），MP3（可能有20-40ms时差）
+- **内存**: 峰值使用2-4GB
+- **并发**: 支持2-4个并发分析任务
 
 ## 🎵 可视化与音频化
 
@@ -295,10 +321,12 @@ services:
     deploy:
       replicas: 2
       resources:
-        limits: {cpus: '2.0', memory: 4G}
+        limits: {memory: 4G}
     environment:
       - ENV=production
-      - MAX_CONCURRENT_TASKS=10
+      - MAX_CONCURRENT_TASKS=4
+    # Apple Silicon优化配置
+    platform: linux/arm64
 ```
 
 ### 环境变量

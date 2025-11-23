@@ -1,7 +1,8 @@
 # 音乐分析API Docker镜像
+# 专为Mac M系列芯片（Apple Silicon）优化
 # 基于原有的allin1镜像，添加FastAPI Web服务
 
-# 使用Python 3.8基础镜像
+# 使用Python 3.8基础镜像（ARM64架构）
 FROM python:3.8-slim
 
 # 设置工作目录
@@ -27,13 +28,13 @@ RUN pip install --upgrade pip
 COPY requirements_filtered.txt .
 COPY api/requirements.txt api/requirements.txt
 
-# 安装torch和依赖（CPU版本）
+# 安装torch和依赖（Apple Silicon优化版本）
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 RUN pip install --no-cache-dir torch==2.2.2 torchvision torchaudio==2.2.2 cython
 RUN pip install --no-cache-dir -r requirements_filtered.txt
 RUN pip install madmom==0.16.1
 
-# 安装NATTEN（CPU版本）
+# 安装NATTEN（Apple Silicon兼容版本）
 RUN pip install natten==0.15.0
 
 # 安装Web服务依赖
