@@ -1,0 +1,410 @@
+"""
+响应模型
+定义API响应的数据结构
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any, Literal, Annotated
+from .data_models import Segment, BeatInfo
+
+
+class AnalysisResult(BaseModel):
+    """分析结果"""
+    path: str = Field(
+        description="音频文件路径",
+        example="/tmp/uploads/song.wav"
+    )
+    bpm: float = Field(
+        description="每分钟节拍数",
+        example=120.0,
+        gt=0
+    )
+    beats: List[float] = Field(
+        description="节拍时间点列表（秒）",
+        example=[0.33, 0.75, 1.14, 1.56]
+    )
+    downbeats: List[float] = Field(
+        description="强拍时间点列表（秒）",
+        example=[0.33, 1.94, 3.53]
+    )
+    beat_positions: List[int] = Field(
+        description="节拍位置列表（1=第一拍，2=第二拍等）",
+        example=[1, 2, 3, 4, 1, 2, 3, 4]
+    )
+    segments: List[Segment] = Field(
+        description="音频段落列表"
+    )
+    activations: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="原始激活数据（如果请求包含）",
+        example={
+            "beat": [0.1, 0.8, 0.9, 0.7],
+            "downbeat": [0.9, 0.2, 0.1, 0.8],
+            "segment": [0.1, 0.3, 0.9, 0.2],
+            "label": [[0.1, 0.8, 0.1, ...], ...]
+        }
+    )
+    embeddings: Optional[List[float]] = Field(
+        default=None,
+        description="嵌入向量数据（如果请求包含）",
+        example=[0.1, 0.2, 0.3, ...]
+    )
+
+    @property
+    def duration(self) -> Optional[float]:
+        """估算音频时长（基于最后一个段落的结束时间）"""
+        if not self.segments:
+            return None
+        return max(segment.end for segment in self.segments)
+
+    @property
+    def segment_count(self) -> int:
+        """段落数量"""
+        return len(self.segments)
+
+    @property
+    def beat_count(self) -> int:
+        """节拍数量"""
+        return len(self.beats)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "path": "/tmp/uploads/song.wav",
+                "bpm": 120.0,
+                "beats": [0.33, 0.75, 1.14, 1.56, 1.98],
+                "downbeats": [0.33, 1.94, 3.53],
+                "beat_positions": [1, 2, 3, 4, 1, 2, 3, 4],
+                "segments": [
+                    {"start": 0.0, "end": 0.33, "label": "start"},
+                    {"start": 0.33, "end": 13.13, "label": "intro"},
+                    {"start": 13.13, "end": 37.53, "label": "chorus"}
+                ]
+            }
+        }
+
+
+class FileLinks(BaseModel):
+    """生成的文件下载链接"""
+    visualization: Optional[str] = Field(
+        default=None,
+        description="可视化图表下载链接",
+        example="/api/download/viz_song.pdf"
+    )
+    sonification: Optional[str] = Field(
+        default=None,
+        description="音频化文件下载链接",
+        example="/api/download/sonif_song.wav"
+    )
+    json_result: Optional[str] = Field(
+        default=None,
+        description="JSON结果文件下载链接",
+        example="/api/download/result_song.json"
+    )
+    activations: Optional[str] = Field(
+        default=None,
+        description="激活数据文件下载链接",
+        example="/api/download/activations_song.npz"
+    )
+    embeddings: Optional[str] = Field(
+        default=None,
+        description="嵌入向量文件下载链接",
+        example="/api/download/embeddings_song.npy"
+    )
+
+
+class AnalysisResponse(BaseModel):
+    """分析API响应"""
+    success: bool = Field(
+        ...,
+        description="请求是否成功",
+        example=True
+    )
+    message: str = Field(
+        ...,
+        description="响应消息",
+        example="分析完成"
+    )
+    data: AnalysisResult = Field(
+        ...,
+        description="分析结果数据"
+    )
+    files: Optional[FileLinks] = Field(
+        default=None,
+        description="生成的文件下载链接"
+    )
+    processing_time: float = Field(
+        ...,
+        description="处理耗时（秒）",
+        example=15.23,
+        ge=0
+    )
+    model_used: str = Field(
+        ...,
+        description="使用的分析模型",
+        example="harmonix-all"
+    )
+    request_id: str = Field(
+        ...,
+        description="请求唯一标识",
+        example="req_20241123_001"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "分析完成",
+                "data": {
+                    "path": "/tmp/uploads/song.wav",
+                    "bpm": 120.0,
+                    "beats": [0.33, 0.75, 1.14, 1.56],
+                    "downbeats": [0.33, 1.94, 3.53],
+                    "beat_positions": [1, 2, 3, 4, 1, 2, 3, 4],
+                    "segments": [
+                        {"start": 0.0, "end": 0.33, "label": "start"},
+                        {"start": 0.33, "end": 13.13, "label": "intro"},
+                        {"start": 13.13, "end": 37.53, "label": "chorus"}
+                    ]
+                },
+                "files": {
+                    "visualization": "/api/download/viz_song.pdf",
+                    "json_result": "/api/download/result_song.json"
+                },
+                "processing_time": 15.23,
+                "model_used": "harmonix-all",
+                "request_id": "req_20241123_001"
+            }
+        }
+
+
+class BatchAnalysisResponse(BaseModel):
+    """批量分析响应"""
+    success: bool = Field(
+        ...,
+        description="批量任务创建成功",
+        example=True
+    )
+    task_id: str = Field(
+        ...,
+        description="任务ID，用于查询结果",
+        example="batch_analysis_20241123_001"
+    )
+    message: str = Field(
+        ...,
+        description="响应消息",
+        example="批量分析任务已创建，共3个文件"
+    )
+    estimated_time: Optional[str] = Field(
+        default=None,
+        description="预计完成时间",
+        example="45-60秒"
+    )
+    file_count: int = Field(
+        ...,
+        description="文件数量",
+        example=3
+    )
+    priority: int = Field(
+        ...,
+        description="任务优先级",
+        example=1
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "task_id": "batch_analysis_20241123_001",
+                "message": "批量分析任务已创建，共3个文件",
+                "estimated_time": "45-60秒",
+                "file_count": 3,
+                "priority": 1
+            }
+        }
+
+
+class TaskStatus(BaseModel):
+    """任务状态"""
+    task_id: str = Field(
+        ...,
+        description="任务ID",
+        example="batch_analysis_20241123_001"
+    )
+    status: Literal["pending", "processing", "completed", "failed", "cancelled"] = Field(
+        ...,
+        description="任务状态",
+        example="processing"
+    )
+    progress: float = Field(
+        ...,
+        description="完成进度（0-100）",
+        example=45.5,
+        ge=0,
+        le=100
+    )
+    current_file: Optional[str] = Field(
+        default=None,
+        description="当前处理的文件",
+        example="song2.wav"
+    )
+    completed_files: List[str] = Field(
+        default=[],
+        description="已完成的文件列表",
+        example=["song1.wav", "song3.wav"]
+    )
+    failed_files: List[str] = Field(
+        default=[],
+        description="失败的文件列表",
+        example=[]
+    )
+    estimated_remaining: Optional[str] = Field(
+        default=None,
+        description="预计剩余时间",
+        example="20-30秒"
+    )
+    created_at: str = Field(
+        ...,
+        description="任务创建时间",
+        example="2024-11-23T10:30:00Z"
+    )
+    updated_at: str = Field(
+        ...,
+        description="任务更新时间",
+        example="2024-11-23T10:31:15Z"
+    )
+
+
+class BatchResultResponse(BaseModel):
+    """批量分析结果响应"""
+    success: bool = Field(
+        ...,
+        description="任务完成状态",
+        example=True
+    )
+    task_id: str = Field(
+        ...,
+        description="任务ID",
+        example="batch_analysis_20241123_001"
+    )
+    status: TaskStatus = Field(
+        ...,
+        description="任务状态详情"
+    )
+    results: Optional[List[AnalysisResult]] = Field(
+        default=None,
+        description="分析结果列表"
+    )
+    files: Optional[Dict[str, FileLinks]] = Field(
+        default=None,
+        description="每个文件对应的下载链接",
+        example={
+            "song1.wav": {"visualization": "/api/download/viz_song1.pdf"},
+            "song2.wav": {"visualization": "/api/download/viz_song2.pdf"}
+        }
+    )
+    total_processing_time: Optional[float] = Field(
+        default=None,
+        description="总处理时间（秒）",
+        example=125.5
+    )
+
+
+class HealthResponse(BaseModel):
+    """健康检查响应"""
+    status: str = Field(
+        ...,
+        description="服务状态",
+        example="healthy"
+    )
+    version: str = Field(
+        ...,
+        description="API版本",
+        example="1.0.0"
+    )
+    uptime: str = Field(
+        ...,
+        description="服务运行时间",
+        example="2h 30m 15s"
+    )
+    cpu_usage: float = Field(
+        ...,
+        description="CPU使用率（%）",
+        example=45.2
+    )
+    memory_usage: float = Field(
+        ...,
+        description="内存使用率（%）",
+        example=68.7
+    )
+    active_tasks: int = Field(
+        ...,
+        description="当前活跃任务数",
+        example=2
+    )
+    total_processed: int = Field(
+        ...,
+        description="总处理文件数",
+        example=156
+    )
+    models_loaded: List[str] = Field(
+        ...,
+        description="已加载的模型",
+        example=["harmonix-all", "harmonix-fold0"]
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "healthy",
+                "version": "1.0.0",
+                "uptime": "2h 30m 15s",
+                "cpu_usage": 45.2,
+                "memory_usage": 68.7,
+                "active_tasks": 2,
+                "total_processed": 156,
+                "models_loaded": ["harmonix-all", "harmonix-fold0"]
+            }
+        }
+
+
+class ErrorResponse(BaseModel):
+    """错误响应格式"""
+    success: bool = Field(default=False, description="请求失败")
+    message: str = Field(..., description="错误描述")
+    error_code: str = Field(..., description="错误代码")
+    details: Optional[Dict[str, Any]] = Field(None, description="错误详情")
+    request_id: Optional[str] = Field(None, description="请求ID")
+
+    class Config:
+        json_schema_extra = {
+            "examples": {
+                "invalid_format": {
+                    "summary": "不支持的文件格式",
+                    "value": {
+                        "success": False,
+                        "message": "文件格式不支持，请上传WAV或MP3文件",
+                        "error_code": "INVALID_FORMAT",
+                        "details": {
+                            "supported_formats": ["audio/wav", "audio/mp3", "audio/mpeg"],
+                            "received_format": "image/jpeg"
+                        },
+                        "request_id": "req_20241123_002"
+                    }
+                },
+                "file_too_large": {
+                    "summary": "文件过大",
+                    "value": {
+                        "success": False,
+                        "message": "文件大小超过50MB限制",
+                        "error_code": "FILE_TOO_LARGE",
+                        "details": {
+                            "max_size_mb": 50,
+                            "received_size_mb": 75.5,
+                            "suggestion": "请压缩音频文件或分割为多个文件"
+                        },
+                        "request_id": "req_20241123_003"
+                    }
+                }
+            }
+        }
